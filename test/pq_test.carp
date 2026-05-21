@@ -25,13 +25,25 @@
         s7 (assert-equal &s6 &(Maybe.Just 10) &(PriorityQueue.pop &pq &IntRef.>) "Third pop is 10")
         s8 (assert-true &s7 (PriorityQueue.empty? &pq) "Queue is empty after popping all elements")
 
-        ;; Test 4: Min-Heap behavior
-        _2 (do
-             (PriorityQueue.push &pq 50 &IntRef.<)
-             (PriorityQueue.push &pq 10 &IntRef.<)
-             (PriorityQueue.push &pq 100 &IntRef.<))
-        s9 (assert-equal &s8 &(Maybe.Just 10) &(PriorityQueue.pop &pq &IntRef.<) "Min-heap pop is 10")
-        s10 (assert-equal &s9 &(Maybe.Just 50) &(PriorityQueue.pop &pq &IntRef.<) "Min-heap pop is 50")
-        s11 (assert-equal &s10 &(Maybe.Just 100) &(PriorityQueue.pop &pq &IntRef.<) "Min-heap pop is 100")
+        ;; Test 4: from-array (Heapify)
+        arr [10 50 20 40 30]
+        pq2 (PriorityQueue.from-array arr &IntRef.>)
+        s9 (assert-equal &s8 5 (PriorityQueue.length &pq2) "from-array length correct")
+        s10 (assert-equal &s9 &(Maybe.Just 50) &(PriorityQueue.pop &pq2 &IntRef.>) "from-array first pop 50")
+        s11 (assert-equal &s10 &(Maybe.Just 40) &(PriorityQueue.pop &pq2 &IntRef.>) "from-array second pop 40")
+
+        ;; Test 5: pop-push
+        _3 (do
+             (PriorityQueue.push &pq 10 &IntRef.>)
+             (PriorityQueue.push &pq 20 &IntRef.>))
+        res-pp (PriorityQueue.pop-push &pq 5 &IntRef.>)
+        s12 (assert-equal &s11 &(Maybe.Just 20) &res-pp "pop-push returned 20")
+        s13 (assert-equal &s12 &(Maybe.Just 10) &(PriorityQueue.peek &pq) "pop-push top is now 10")
+
+        ;; Test 6: push-pop
+        res-p-pop (PriorityQueue.push-pop &pq 100 &IntRef.>)
+        s14 (assert-equal &s13 100 res-p-pop "push-pop 100 returned 100 (it was max)")
+        s15 (assert-equal &s14 &(Maybe.Just 10) &(PriorityQueue.peek &pq) "push-pop kept top as 10")
+
         ]
-    s11))
+    s15))

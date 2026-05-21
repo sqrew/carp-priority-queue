@@ -7,6 +7,8 @@ A high-performance, generic Priority Queue (Binary Heap) for the [Carp](https://
 - **Generic**: Works with any type that can be compared.
 - **Flexible**: Can be used as a Max-Heap or Min-Heap by providing the appropriate comparison function.
 - **Efficient**: $O(\log n)$ insertion and extraction.
+- **$O(n)$ Heapify**: Build a heap from an existing array in linear time.
+- **Iterative Implementation**: High-performance bubbling logic without recursion overhead.
 - **Zero Allocations in Hot Paths**: Reuses the underlying array.
 
 ## Usage
@@ -36,6 +38,14 @@ To use as a Min-Heap, just use the `<` comparison:
 (push &pq 10 &IntRef.<)
 (push &pq 30 &IntRef.<)
 (pop &pq &IntRef.<) ;; Returns 10
+```
+
+### Efficient Replacement
+
+If you need to replace the top element (e.g., in some pathfinding algorithms), use `pop-push`:
+
+```carp
+(pop-push &pq new-val &IntRef.>) ;; Faster than a pop followed by a push
 ```
 
 ## Testing

@@ -23,17 +23,28 @@ You can use the `PriorityQueue` with custom types by providing a comparison func
         (Maybe.Nothing) ()))))
 ```
 
-## Implementing Dijkstra's Algorithm (Conceptual)
+## Building from an Array (Heapify)
 
-Priority Queues are the backbone of many graph algorithms.
+If you already have a collection of data, `from-array` is the fastest way to turn it into a heap ($O(n)$).
 
 ```carp
-(defn dijkstra [start-node]
-  (let [pq (PriorityQueue.new)]
-    (do
-      (push &pq (NodeWeight.init start-node 0) &NodeWeight.less-than)
-      (while (not (empty? &pq))
-        (let [current (Maybe.unsafe-from (pop &pq &NodeWeight.less-than))]
-          ;; Explore neighbors...
-          )))))
+(let [items [10 50 20 40 30]
+      pq (from-array items &IntRef.>)]
+  (peek &pq)) ;; Returns (Maybe.Just 50)
+```
+
+## Top-K Selection
+
+A common use for `push-pop` is maintaining a fixed-size heap of the "top K" elements.
+
+```carp
+(let [pq (PriorityQueue.new)
+      limit 3]
+  (do
+    (foreach [x [10 50 20 40 30]]
+      (if (< (length &pq) limit)
+        (push &pq @x &IntRef.<)
+        (ignore (push-pop &pq @x &IntRef.<))))
+    ;; pq now contains the 3 largest elements: 30, 40, 50
+    ))
 ```
