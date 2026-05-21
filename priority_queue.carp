@@ -115,6 +115,59 @@
           (bubble-down arr 0 cmp)
           top))))
 
+  (doc update-top! "updates the top element using the function f and restores the heap property.")
+  (defn update-top! [pq f cmp]
+    (if (PriorityQueue.empty? pq)
+      ()
+      (let [arr (PriorityQueue.data pq)
+            top @(Array.unsafe-nth arr 0)]
+        (do
+          (Array.aset! arr 0 (~f top))
+          (bubble-down arr 0 cmp)))))
+
+  (doc into-array "consumes the Priority Queue and returns the underlying array.")
+  (defn into-array [pq]
+    @(PriorityQueue.data &pq))
+
+  (doc into-sorted-array "consumes the Priority Queue and returns its elements as a sorted array (Heapsort).")
+  (defn into-sorted-array [pq cmp]
+    (let [res []
+          len (PriorityQueue.length &pq)]
+      (do
+        (for [i 0 len]
+          (match (pop &pq cmp)
+            (Maybe.Just val) (Array.push-back! &res val)
+            (Maybe.Nothing) ()))
+        res)))
+
+  (doc append! "merges another Priority Queue into this one and re-heapifies.")
+  (defn append! [pq other cmp]
+    (let [arr (PriorityQueue.data pq)
+          other-arr (PriorityQueue.data other)]
+      (do
+        (for [i 0 (Array.length other-arr)]
+          (Array.push-back! arr @(Array.unsafe-nth other-arr i)))
+        (let [len (Array.length arr)]
+          (for [i (dec (/ len 2)) -1 -1]
+            (bubble-down arr i cmp))))))
+
+  (doc valid? "checks if the heap property is currently maintained.")
+  (defn valid? [pq cmp]
+    (let [arr (PriorityQueue.data pq)
+          len (Array.length arr)
+          ok true]
+      (do
+        (for [i 0 len]
+          (let [left (inc (* i 2))
+                right (+ (* i 2) 2)]
+            (do
+              (when (and (< left len) (~cmp (Array.unsafe-nth arr left) (Array.unsafe-nth arr i)))
+                (set! ok false))
+              (when (and (< right len) (~cmp (Array.unsafe-nth arr right) (Array.unsafe-nth arr i)))
+                (set! ok false))
+              (when (not ok) (break)))))
+        ok)))
+
   (doc clear! "removes all elements from the Priority Queue.")
   (defn clear! [pq]
     (Array.clear! (PriorityQueue.data pq)))

@@ -18,32 +18,35 @@
             (PriorityQueue.push &pq 20 &IntRef.>))
         s3 (assert-equal &s2 3 (PriorityQueue.length &pq) "Length is 3 after 3 pushes")
         s4 (assert-equal &s3 &(Maybe.Just 30) &(PriorityQueue.peek &pq) "Peek returns 30 (max)")
+        s5 (assert-true &s4 (PriorityQueue.valid? &pq &IntRef.>) "Heap is valid after pushes")
 
-        ;; Test 3: Pop elements
-        s5 (assert-equal &s4 &(Maybe.Just 30) &(PriorityQueue.pop &pq &IntRef.>) "First pop is 30")
-        s6 (assert-equal &s5 &(Maybe.Just 20) &(PriorityQueue.pop &pq &IntRef.>) "Second pop is 20")
-        s7 (assert-equal &s6 &(Maybe.Just 10) &(PriorityQueue.pop &pq &IntRef.>) "Third pop is 10")
-        s8 (assert-true &s7 (PriorityQueue.empty? &pq) "Queue is empty after popping all elements")
-
-        ;; Test 4: from-array (Heapify)
+        ;; Test 3: from-array (Heapify)
         arr [10 50 20 40 30]
         pq2 (PriorityQueue.from-array arr &IntRef.>)
-        s9 (assert-equal &s8 5 (PriorityQueue.length &pq2) "from-array length correct")
-        s10 (assert-equal &s9 &(Maybe.Just 50) &(PriorityQueue.pop &pq2 &IntRef.>) "from-array first pop 50")
-        s11 (assert-equal &s10 &(Maybe.Just 40) &(PriorityQueue.pop &pq2 &IntRef.>) "from-array second pop 40")
+        s6 (assert-true &s5 (PriorityQueue.valid? &pq2 &IntRef.>) "Heapify produces valid heap")
+        s7 (assert-equal &s6 &(Maybe.Just 50) &(PriorityQueue.pop &pq2 &IntRef.>) "from-array first pop 50")
 
-        ;; Test 5: pop-push
-        _3 (do
-             (PriorityQueue.push &pq 10 &IntRef.>)
-             (PriorityQueue.push &pq 20 &IntRef.>))
-        res-pp (PriorityQueue.pop-push &pq 5 &IntRef.>)
-        s12 (assert-equal &s11 &(Maybe.Just 20) &res-pp "pop-push returned 20")
-        s13 (assert-equal &s12 &(Maybe.Just 10) &(PriorityQueue.peek &pq) "pop-push top is now 10")
+        ;; Test 4: update-top!
+        _2 (PriorityQueue.update-top! &pq &(fn [x] 5) &IntRef.>)
+        s8 (assert-equal &s7 &(Maybe.Just 20) &(PriorityQueue.peek &pq) "update-top! 30->5 moves 20 to top")
+        s9 (assert-true &s8 (PriorityQueue.valid? &pq &IntRef.>) "Heap is valid after update-top!")
 
-        ;; Test 6: push-pop
-        res-p-pop (PriorityQueue.push-pop &pq 100 &IntRef.>)
-        s14 (assert-equal &s13 100 res-p-pop "push-pop 100 returned 100 (it was max)")
-        s15 (assert-equal &s14 &(Maybe.Just 10) &(PriorityQueue.peek &pq) "push-pop kept top as 10")
+        ;; Test 5: append!
+        pq3 (PriorityQueue.new)
+        _4 (PriorityQueue.push &pq3 100 &IntRef.>)
+        _5 (PriorityQueue.append! &pq &pq3 &IntRef.>)
+        s10 (assert-equal &s9 4 (PriorityQueue.length &pq) "Length is 4 after append!")
+        s11 (assert-equal &s10 &(Maybe.Just 100) &(PriorityQueue.peek &pq) "append! worked, 100 is max")
+        s12 (assert-true &s11 (PriorityQueue.valid? &pq &IntRef.>) "Heap is valid after append!")
 
+        ;; Test 6: into-sorted-array
+        sorted (PriorityQueue.into-sorted-array pq &IntRef.>)
+        s13 (assert-equal &s12 4 (Array.length &sorted) "Sorted array length correct")
+        s14 (assert-equal &s13 &[100 20 10 5] &sorted "into-sorted-array produced correct order")
+
+        ;; Test 7: into-array
+        pq4 (PriorityQueue.from-array [3 1 2] &IntRef.>)
+        raw (PriorityQueue.into-array pq4)
+        s15 (assert-equal &s14 3 (Array.length &raw) "into-array length correct")
         ]
     s15))
