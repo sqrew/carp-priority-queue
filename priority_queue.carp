@@ -49,13 +49,18 @@
   (defn new []
     (PriorityQueue.init []))
 
+  (doc rebuild! "restores the heap invariant in O(n) time. Useful if the underlying array was modified manually.")
+  (defn rebuild! [pq cmp]
+    (let [arr (PriorityQueue.data pq)
+          len (Array.length arr)]
+      (for [i (dec (/ len 2)) -1 -1]
+        (bubble-down arr i cmp))))
+
   (doc from-array "builds a Priority Queue from an existing array in O(n) time.")
   (defn from-array [arr cmp]
-    (let [pq (PriorityQueue.init arr)
-          len (Array.length (PriorityQueue.data &pq))]
+    (let [pq (PriorityQueue.init arr)]
       (do
-        (for [i (dec (/ len 2)) -1 -1]
-          (bubble-down (PriorityQueue.data &pq) i cmp))
+        (rebuild! &pq cmp)
         pq)))
 
   (doc length "returns the number of elements in the Priority Queue.")
@@ -72,6 +77,12 @@
     (if (PriorityQueue.empty? pq)
       (Maybe.Nothing)
       (Maybe.Just @(Array.unsafe-nth (PriorityQueue.data pq) 0))))
+
+  (doc peek-ptr "returns a raw pointer to the top element of the Priority Queue.")
+  (defn peek-ptr [pq]
+    (if (PriorityQueue.empty? pq)
+      (the (Ptr t) (Pointer.from-long 0l))
+      (Pointer.address (Array.unsafe-nth (PriorityQueue.data pq) 0))))
 
   (doc push! "inserts a value into the Priority Queue and restores the heap property.")
   (defn push! [pq val cmp]
@@ -121,9 +132,10 @@
   (defn update-top! [pq f cmp]
     (if (PriorityQueue.empty? pq)
       ()
-      (do
-        (Array.aset! (PriorityQueue.data pq) 0 (~f @(Array.unsafe-nth (PriorityQueue.data pq) 0)))
-        (bubble-down (PriorityQueue.data pq) 0 cmp))))
+      (let [arr (PriorityQueue.data pq)]
+        (do
+          (Array.aset! arr 0 (~f @(Array.unsafe-nth arr 0)))
+          (bubble-down arr 0 cmp)))))
 
   (doc remove-at! "removes an element at an arbitrary index and restores the heap property.")
   (defn remove-at! [pq idx cmp]
@@ -163,13 +175,6 @@
           (set! i (inc i))
           (ignore (remove-at! pq i cmp))))))
 
-  (doc rebuild! "restores the heap invariant in O(n) time.")
-  (defn rebuild! [pq cmp]
-    (let [arr (PriorityQueue.data pq)
-          len (Array.length arr)]
-      (for [i (dec (/ len 2)) -1 -1]
-        (bubble-down arr i cmp))))
-
   (doc clear! "removes all elements from the Priority Queue.")
   (defn clear! [pq]
     (let [arr (PriorityQueue.data pq)]
@@ -181,7 +186,7 @@ NOTE: This currently clones the array and clears the queue.")
   (defn into-array [pq]
     (let [arr @(PriorityQueue.data &pq)]
       (do
-        (PriorityQueue.clear! &pq)
+        (clear! &pq)
         arr)))
 
   (doc into-sorted-array "consumes the Priority Queue and returns its elements as a sorted array (Heapsort).")
