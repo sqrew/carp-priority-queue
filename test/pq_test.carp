@@ -26,47 +26,59 @@
         s7 (assert-equal &s6 2 (PriorityQueue.length &pq) "Length is 2 after pop!")
 
         ;; Test 4: Stress Test (Random)
-        _2 (PriorityQueue.clear! &pq)
-        _3 (for [i 0 100] (PriorityQueue.push! &pq (Int.random-between 0 1000) &IntRef.>))
-        s8 (assert-equal &s7 100 (PriorityQueue.length &pq) "Stress test: 100 items pushed")
-        s9 (assert-true &s8 (PriorityQueue.valid? &pq &IntRef.>) "Stress test: heap property maintained")
-        
-        last-val 1001
-        all-ordered true
-        _4 (for [i 0 100]
-             (let [v (Maybe.unsafe-from (PriorityQueue.pop! &pq &IntRef.>))]
+        s8 (do
+             (PriorityQueue.clear! &pq)
+             (for [i 0 100] (PriorityQueue.push! &pq (Int.random-between 0 1000) &IntRef.>))
+             (let [st (assert-equal &s7 100 (PriorityQueue.length &pq) "Stress test: 100 items pushed")
+                   st2 (assert-true &st (PriorityQueue.valid? &pq &IntRef.>) "Stress test: heap property maintained")
+                   last-val 1001
+                   all-ordered true]
                (do
-                 (if (> v last-val) (set! all-ordered false) ())
-                 (set! last-val v))))
-        s10 (assert-true &s9 all-ordered "Stress test: all elements popped in descending order")
+                 (for [i 0 100]
+                   (let [v (Maybe.unsafe-from (PriorityQueue.pop! &pq &IntRef.>))]
+                     (do
+                       (if (> v last-val) (set! all-ordered false) ())
+                       (set! last-val v))))
+                 (assert-true &st2 all-ordered "Stress test: all elements popped in descending order"))))
 
         ;; Test 5: Search & Rescue (remove-at!, modify-at!)
-        _5 (do
+        s11 (do
              (PriorityQueue.clear! &pq)
              (PriorityQueue.push! &pq 10 &IntRef.>)
              (PriorityQueue.push! &pq 20 &IntRef.>)
-             (PriorityQueue.push! &pq 30 &IntRef.>))
-        
-        idx (Maybe.unsafe-from (PriorityQueue.find-index &pq &(fn [x] (= @x 30))))
-        _6 (PriorityQueue.remove-at! &pq idx &IntRef.>)
-        s11 (assert-equal &s10 2 (PriorityQueue.length &pq) "Length correct after remove-at!")
-        s12 (assert-true &s11 (PriorityQueue.valid? &pq &IntRef.>) "Heap valid after remove-at!")
-        s13 (assert-equal &s12 &(Maybe.Just 20) &(PriorityQueue.peek &pq) "Peek correct after remove-at!")
-
-        _7 (PriorityQueue.modify-at! &pq 0 &(fn [x] 100) &IntRef.>)
-        s14 (assert-equal &s13 &(Maybe.Just 100) &(PriorityQueue.peek &pq) "modify-at! updated top")
-        s15 (assert-true &s14 (PriorityQueue.valid? &pq &IntRef.>) "Heap valid after modify-at!")
+             (PriorityQueue.push! &pq 30 &IntRef.>)
+             (let [idx (Maybe.unsafe-from (PriorityQueue.find-index &pq &(fn [x] (= @x 30))))
+                   _ (PriorityQueue.remove-at! &pq idx &IntRef.>)
+                   st (assert-equal &s8 2 (PriorityQueue.length &pq) "Length correct after remove-at!")
+                   st2 (assert-true &st (PriorityQueue.valid? &pq &IntRef.>) "Heap valid after remove-at!")
+                   st3 (assert-equal &st2 &(Maybe.Just 20) &(PriorityQueue.peek &pq) "Peek correct after remove-at!")]
+               (do
+                 (ignore (PriorityQueue.modify-at! &pq 0 &(fn [x] 100) &IntRef.>))
+                 (let [st4 (assert-equal &st3 &(Maybe.Just 100) &(PriorityQueue.peek &pq) "modify-at! updated top")]
+                   (assert-true &st4 (PriorityQueue.valid? &pq &IntRef.>) "Heap valid after modify-at!")))))
 
         ;; Test 6: retain!
-        _8 (do
+        s15 (do
              (PriorityQueue.push! &pq 5 &IntRef.>)
              (PriorityQueue.push! &pq 200 &IntRef.>)
-             (PriorityQueue.retain! &pq &(fn [x] (> @x 50)) &IntRef.>))
-        s16 (assert-equal &s15 2 (PriorityQueue.length &pq) "retain! kept 2 elements")
-        s17 (assert-true &s16 (PriorityQueue.valid? &pq &IntRef.>) "Heap valid after retain!")
+             (PriorityQueue.retain! &pq &(fn [x] (> @x 50)) &IntRef.>)
+             (let [st (assert-equal &s11 2 (PriorityQueue.length &pq) "retain! kept 2 elements")]
+               (assert-true &st (PriorityQueue.valid? &pq &IntRef.>) "Heap valid after retain!")))
 
-        ;; Test 7: copy
-        pq-copy (PriorityQueue.copy &pq)
-        s18 (assert-equal &s17 (PriorityQueue.length &pq) (PriorityQueue.length &pq-copy) "Copy length correct")
+        ;; Test 7: Duplicates & Degenerate
+        s17 (do
+             (PriorityQueue.clear! &pq)
+             (PriorityQueue.push! &pq 5 &IntRef.>)
+             (PriorityQueue.push! &pq 5 &IntRef.>)
+             (let [st (assert-equal &s15 2 (PriorityQueue.length &pq) "Duplicates pushed correctly")
+                   st2 (assert-true &st (PriorityQueue.valid? &pq &IntRef.>) "Heap valid with duplicates")]
+               (do
+                 (ignore (PriorityQueue.pop! &pq &IntRef.>))
+                 (let [st3 (assert-equal &st2 1 (PriorityQueue.length &pq) "Popped duplicate correctly")
+                       _ (PriorityQueue.remove-at! &pq 0 &IntRef.>)
+                       st4 (assert-true &st3 (PriorityQueue.empty? &pq) "Remove-at! on size 1 works")]
+                   (do
+                     (ignore (PriorityQueue.rebuild! &pq &IntRef.>))
+                     (assert-true &st4 (PriorityQueue.empty? &pq) "Rebuild on empty heap works"))))))
         ]
-    s18))
+    s17))

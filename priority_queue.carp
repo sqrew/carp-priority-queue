@@ -11,12 +11,9 @@
       (while (> curr 0)
         (let [parent-idx (/ (dec curr) 2)]
           (if (~cmp (Array.unsafe-nth arr curr) (Array.unsafe-nth arr parent-idx))
-            (let [child @(Array.unsafe-nth arr curr)
-                  parent @(Array.unsafe-nth arr parent-idx)]
-              (do
-                (Array.aset! arr curr parent)
-                (Array.aset! arr parent-idx child)
-                (set! curr parent-idx)))
+            (do
+              (Array.swap! arr curr parent-idx)
+              (set! curr parent-idx))
             (set! curr 0))))))
 
   (defn- bubble-down [arr idx cmp]
@@ -34,14 +31,19 @@
             (when (and (< right len)
                        (~cmp (Array.unsafe-nth arr right) (Array.unsafe-nth arr largest)))
               (set! largest right))
-            (if (not (= largest idx))
-              (let [tmp @(Array.unsafe-nth arr curr)
-                    next-val @(Array.unsafe-nth arr largest)]
-                (do
-                  (Array.aset! arr curr next-val)
-                  (Array.aset! arr largest tmp)
-                  (set! curr largest)))
+            (if (not (= largest curr))
+              (do
+                (Array.swap! arr curr largest)
+                (set! curr largest))
               (set! running false)))))))
+
+  (defn- repair! [arr idx cmp]
+    (let [len (Array.length arr)]
+      (if (and (>= idx 0) (< idx len))
+        (do
+          (bubble-up arr idx cmp)
+          (bubble-down arr idx cmp))
+        ())))
 
   (doc new "creates a new, empty Priority Queue.")
   (defn new []
@@ -119,11 +121,9 @@
   (defn update-top! [pq f cmp]
     (if (PriorityQueue.empty? pq)
       ()
-      (let [arr (PriorityQueue.data pq)
-            top @(Array.unsafe-nth arr 0)]
-        (do
-          (Array.aset! arr 0 (~f top))
-          (bubble-down arr 0 cmp)))))
+      (do
+        (Array.aset! (PriorityQueue.data pq) 0 (~f @(Array.unsafe-nth (PriorityQueue.data pq) 0)))
+        (bubble-down (PriorityQueue.data pq) 0 cmp))))
 
   (doc remove-at! "removes an element at an arbitrary index and restores the heap property.")
   (defn remove-at! [pq idx cmp]
@@ -134,11 +134,9 @@
           (do
             (if (= idx last-idx)
               (ignore (Array.pop-back! arr))
-              (let [replacement (Array.pop-back! arr)]
-                (do
-                  (Array.aset! arr idx replacement)
-                  (bubble-up arr idx cmp)
-                  (bubble-down arr idx cmp))))
+              (do
+                (Array.aset! arr idx (Array.pop-back! arr))
+                (repair! arr idx cmp)))
             true))
         false)))
 
@@ -149,8 +147,7 @@
       (if (and (>= idx 0) (< idx len))
         (do
           (Array.aset! arr idx (~f @(Array.unsafe-nth arr idx)))
-          (bubble-up arr idx cmp)
-          (bubble-down arr idx cmp)
+          (repair! arr idx cmp)
           true)
         false)))
 
@@ -166,7 +163,7 @@
           (set! i (inc i))
           (ignore (remove-at! pq i cmp))))))
 
-  (doc rebuild! "restores the heap invariant in O(n) time. Useful if the underlying array was modified manually.")
+  (doc rebuild! "restores the heap invariant in O(n) time.")
   (defn rebuild! [pq cmp]
     (let [arr (PriorityQueue.data pq)
           len (Array.length arr)]
@@ -175,14 +172,16 @@
 
   (doc clear! "removes all elements from the Priority Queue.")
   (defn clear! [pq]
-    (while (not (PriorityQueue.empty? pq))
-      (ignore (Array.pop-back! (PriorityQueue.data pq)))))
+    (let [arr (PriorityQueue.data pq)]
+      (while (not (Array.empty? arr))
+        (ignore (Array.pop-back! arr)))))
 
-  (doc into-array "consumes the Priority Queue and returns the underlying array.")
+  (doc into-array "consumes the Priority Queue and returns its data as an array. 
+NOTE: This currently clones the array and clears the queue.")
   (defn into-array [pq]
     (let [arr @(PriorityQueue.data &pq)]
       (do
-        (clear! &pq)
+        (PriorityQueue.clear! &pq)
         arr)))
 
   (doc into-sorted-array "consumes the Priority Queue and returns its elements as a sorted array (Heapsort).")
@@ -215,8 +214,7 @@
     (str* "PriorityQueue(" (Array.str (PriorityQueue.data pq)) ")"))
   (implements str PriorityQueue.str)
 
-  (doc valid? "checks if the heap property is currently maintained.
-The comparator cmp(a, b) should return true if a has higher priority than b.")
+  (doc valid? "checks if the heap property is currently maintained.")
   (defn valid? [pq cmp]
     (let [arr (PriorityQueue.data pq)
           len (Array.length arr)
