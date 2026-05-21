@@ -7,14 +7,15 @@
 
 (defmodule PriorityQueue
   (defn- bubble-up [arr idx cmp]
-    (let [curr idx]
-      (while (> curr 0)
+    (let [curr idx
+          running true]
+      (while (and running (> curr 0))
         (let [parent-idx (/ (dec curr) 2)]
           (if (~cmp (Array.unsafe-nth arr curr) (Array.unsafe-nth arr parent-idx))
             (do
               (Array.swap! arr curr parent-idx)
               (set! curr parent-idx))
-            (set! curr 0))))))
+            (set! running false))))))
 
   (defn- bubble-down [arr idx cmp]
     (let [len (Array.length arr)
@@ -78,11 +79,11 @@
       (Maybe.Nothing)
       (Maybe.Just @(Array.unsafe-nth (PriorityQueue.data pq) 0))))
 
-  (doc peek-ptr "returns a raw pointer to the top element of the Priority Queue.")
+  (doc peek-ptr "returns a reference to the top element of the Priority Queue wrapped in a Maybe.")
   (defn peek-ptr [pq]
     (if (PriorityQueue.empty? pq)
-      (the (Ptr t) (Pointer.from-long 0l))
-      (Pointer.address (Array.unsafe-nth (PriorityQueue.data pq) 0))))
+      (Maybe.Nothing)
+      (Maybe.Just (Pointer.address (Array.unsafe-nth (PriorityQueue.data pq) 0)))))
 
   (doc push! "inserts a value into the Priority Queue and restores the heap property.")
   (defn push! [pq val cmp]
@@ -102,6 +103,7 @@
           (if (= last-idx 0)
             (ignore (Array.pop-back! arr))
             (do
+              ;; Replace top with the last element and sink it
               (Array.aset! arr 0 (Array.pop-back! arr))
               (bubble-down arr 0 cmp)))
           (Maybe.Just top)))))
@@ -173,6 +175,8 @@
       (while (< i (PriorityQueue.length pq))
         (if (~pred (Array.unsafe-nth (PriorityQueue.data pq) i))
           (set! i (inc i))
+          ;; Note: remove-at! replaces element i with the last element,
+          ;; so we must re-examine index i in the next iteration.
           (ignore (remove-at! pq i cmp))))))
 
   (doc clear! "removes all elements from the Priority Queue.")
@@ -181,8 +185,8 @@
       (while (not (Array.empty? arr))
         (ignore (Array.pop-back! arr)))))
 
-  (doc into-array "consumes the Priority Queue and returns its data as an array. 
-NOTE: This currently clones the array and clears the queue.")
+  (doc into-array "empties the Priority Queue and returns its data as an array. 
+NOTE: This currently clones the array and then clears the queue.")
   (defn into-array [pq]
     (let [arr @(PriorityQueue.data &pq)]
       (do
