@@ -1,0 +1,77 @@
+(use Array)
+
+(deftype (PriorityQueue t) [
+  data (Array t)
+])
+
+(defmodule PriorityQueue
+  (defn new []
+    (PriorityQueue.init []))
+
+  (defn length [pq]
+    (Array.length (PriorityQueue.data pq)))
+
+  (defn empty? [pq]
+    (= (Array.length (PriorityQueue.data pq)) 0))
+  (implements empty? PriorityQueue.empty?)
+
+  (defn peek [pq]
+    (if (PriorityQueue.empty? pq)
+      (Maybe.Nothing)
+      (Maybe.Just @(Array.unsafe-nth (PriorityQueue.data pq) 0))))
+
+  (defn- bubble-up [arr idx cmp]
+    (if (= idx 0)
+      ()
+      (let [parent-idx (/ (- idx 1) 2)]
+        (if (~cmp (Array.unsafe-nth arr idx) (Array.unsafe-nth arr parent-idx))
+          (do
+            (let [child @(Array.unsafe-nth arr idx)
+                  parent @(Array.unsafe-nth arr parent-idx)]
+              (do
+                (Array.aset! arr idx parent)
+                (Array.aset! arr parent-idx child)))
+            (bubble-up arr parent-idx cmp))
+          ()))))
+
+  (defn push [pq val cmp]
+    (let [arr (PriorityQueue.data pq)]
+      (do
+        (Array.push-back! arr val)
+        (bubble-up arr (dec (Array.length arr)) cmp))))
+
+  (defn- bubble-down [arr idx cmp]
+    (let [len (Array.length arr)
+          left-idx (+ (* idx 2) 1)
+          right-idx (+ (* idx 2) 2)
+          largest idx]
+      (do
+        (when (and (< left-idx len)
+                   (~cmp (Array.unsafe-nth arr left-idx) (Array.unsafe-nth arr largest)))
+          (set! largest left-idx))
+        (when (and (< right-idx len)
+                   (~cmp (Array.unsafe-nth arr right-idx) (Array.unsafe-nth arr largest)))
+          (set! largest right-idx))
+        (if (not (= largest idx))
+          (let [tmp @(Array.unsafe-nth arr idx)
+                next-val @(Array.unsafe-nth arr largest)]
+            (do
+              (Array.aset! arr idx next-val)
+              (Array.aset! arr largest tmp)
+              (bubble-down arr largest cmp)))
+          ()))))
+
+  (defn pop [pq cmp]
+    (if (PriorityQueue.empty? pq)
+      (Maybe.Nothing)
+      (let [arr (PriorityQueue.data pq)
+            last-idx (dec (Array.length arr))
+            top @(Array.unsafe-nth arr 0)]
+        (do
+          (if (= last-idx 0)
+            (ignore (Array.pop-back! arr))
+            (do
+              (Array.aset! arr 0 (Array.pop-back! arr))
+              (bubble-down arr 0 cmp)))
+          (Maybe.Just top)))))
+)
